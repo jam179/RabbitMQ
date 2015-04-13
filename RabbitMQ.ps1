@@ -18,11 +18,11 @@ Function New-DLFolder
 		[string]$DownloadDIR
 	)
 
-	if (Test-Path $DownloadDIR)		# Test download directory needs to be created
+	If (Test-Path $DownloadDIR)		# Test download directory needs to be created
 	{
 		Write-Verbose("$DownloadDIR directory exists.")
 	}
-		else
+    Else
 	{
 		New-Item $DownloadDIR -ItemType directory
 		Write-Verbose("$DownloadDIR directory was created.")
@@ -46,7 +46,7 @@ Function Get-Installer
 
 	$Out = $Path + "\" + $Filename 
 
-	if (Test-Path $Out)		#Test if the file needs to be downloaded
+	If (Test-Path $Out)		#Test if the file needs to be downloaded
 	{
 		Write-Verbose("$Out already exists. Skipping download.")
 	}
@@ -134,11 +134,11 @@ Function New-RabbitMQBuild
 	Write-Verbose("Test for Previous install.")
 	$ContinueInstall = Test-RabbitMQ
 
-	if ($ContinueInstall -eq $True)
+	If ($ContinueInstall -eq $True)
 	{
 		Write-Verbose("RabbitMQ install failed due to previous installation.")
 	}
-	else
+	Else
 	{
         Write-Verbose("Continuing with RabbitMQ install.")
 
