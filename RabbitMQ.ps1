@@ -1,12 +1,42 @@
-﻿Function Test-RabbitMQ
+﻿Function Test-RabbitMQMGMT
 {
-	# Test if the RabbitMQ is installed.
-	Write-Verbose("Checking for RabbitMQ registry key.") 
-	$RabbitRegCheck = Get-ItemProperty -path "HKLM:\Software\Ericsson\Erlang\ErlSrv\1.1\RabbitMQ" -ErrorAction SilentlyContinue
-	$RegKeyPresent = ($RabbitRegCheck -ne $null)
-	Write-Verbose("RabbitMQ Registry key present: $RegKeyPresent")
+    $ServiceExist = Get-Service -Name RabbitMQ -ErrorAction SilentlyContinue
+    $Exist = ($ServiceExist -ne $null)
 
-	Return $RegKeyPresent
+    if ($Exist -eq $True)
+    {
+       Write-Verbose ("RabbitMQ service detected")
+       If ($ServiceExist.Status -eq "Stopped")
+       {
+            Write-Verbose ("Service Status is " + $ServiceExist.Status)
+            Start-RabbitMQService
+
+            Write-Verbose ("Pausing for 5 Seconds to allow service to Start")
+            Start-Sleep -Seconds 5
+            # Test if RabbitMQ is installed With the Management plugin enabled.
+	        Write-Verbose("Checking if the RabbitMQ management plugin is enabled.") 
+	        $ListenCHK = netstat -nao | findstr ":15672" 
+	        $Portlistening = ($ListenCHK -ne $null)
+	        Write-Verbose("RabbitMQ management plugin enabled: $Portlistening")
+
+	        Return $Portlistening
+       }
+       Else
+       {
+            # Test if RabbitMQ is installed With the Management plugin enabled.
+	        Write-Verbose("Checking if the RabbitMQ management plugin is enabled.") 
+	        $ListenCHK = netstat -nao | findstr ":15672" 
+	        $Portlistening = ($ListenCHK -ne $null)
+	        Write-Verbose("RabbitMQ management plugin enabled: $Portlistening")
+
+	        Return $Portlistening
+       }
+    }
+    Else
+    {
+        $Portlistening = $false
+        Return $Portlistening
+    }
 }
 
 Function New-DLFolder
@@ -59,6 +89,29 @@ Function Get-Installer
 	Return $Out, $Filename
 }
 
+Function Test-PreviousInstall
+{
+[CmdletBinding()]
+	Param
+	(
+        [Parameter(Mandatory=$true)]
+        [string]$AppToCheck
+    )
+
+    $Check = Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Select DisplayName | where { $_.DisplayName -match "$AppToCheck"}
+
+    if ($Check -ne $Null )
+    {
+        Write-Verbose ("$AppToCheck is installed.")
+        Return "Yes"
+    }
+    else
+    {
+        Write-Verbose ("$AppToCheck is NOT installed.")
+        Return "No"
+    }
+}
+
 Function Install-Software
 {
 	[CmdletBinding()]
@@ -107,6 +160,22 @@ Function Enable-RabbitMQManagement
 	}
 }
 
+Function Stop-RabbitMQService
+{
+    Write-Verbose ("Attempting stop.")
+    Stop-Service -Name RabbitMQ -Force
+    $RabbitMQSRV = Get-Service -Name RabbitMQ
+    Write-Verbose ("Service is " + $RabbitMQSRV.Status)
+}
+
+Function Start-RabbitMQService
+{
+    Write-Verbose ("Attempting start.")
+    Start-Service -Name RabbitMQ 
+    $RabbitMQSRV = Get-Service -Name RabbitMQ
+    Write-Verbose ("Service is " + $RabbitMQSRV.Status)
+}
+
 Function New-RabbitMQBuild
 {
 	[CmdletBinding()]
@@ -132,9 +201,9 @@ Function New-RabbitMQBuild
 
 	<# 1. Test to see if Rabbit is installed #>
 	Write-Verbose("Test for Previous install.")
-	$ContinueInstall = Test-RabbitMQ
+	$StartInstall = Test-RabbitMQMGMT
 
-	If ($ContinueInstall -eq $True)
+	If ($StartInstall -eq $True)
 	{
 		Write-Verbose("RabbitMQ install failed due to previous installation.")
 	}
@@ -168,18 +237,46 @@ Function New-RabbitMQBuild
 
 		$RabbitMQFile1 = $RabbitMQFile.Substring(0,$RabbitMQFile.Length-4)
 
-		<# 6. Install Erlang #>
-		Write-Verbose("Install Erlang")
-		$ErlangArguments = "/S -Wait -Verbose"
-		Install-Software $ErLangPath $ErlangArguments $ErlangFile1
+		<# 6. Install Erlang #> 
+        #Test: If Erlang is installed
+        $ErlangString = "Erlang"
+        $ErlangInstalled = Test-PreviousInstall -AppToCheck $ErlangString
 
+        If ($ErlangInstalled -eq "Yes")
+        {
+            Write-Verbose ("Erlang install aborted.")
+        }
+        Else
+        {
+            Write-Verbose("Installing Erlang")
+		    $ErlangArguments = "/S -Wait -Verbose"
+		    Install-Software $ErLangPath $ErlangArguments $ErlangFile1    
+        }
+       
 		<# 7. Install RabbitMQ #>
-		Write-Verbose("Install RabbitMQ.")
-		$RabbitArguments = "/S -Verbose"
-		Install-Software $RabbitMQPath $RabbitArguments $RabbitMQFile1
+        #Test: If RabbitMQ is instlled
+        $RabbitMQString = "RabbitMQ Server"
+        $RabbitMQInstalled = Test-PreviousInstall -AppToCheck $RabbitMQString
 
+        If ($RabbitMQInstalled -eq "Yes")
+        {
+            Write-Verbose ("RabbitMQ install aborted.")
+        }
+        Else
+        {
+		    Write-Verbose("Installing RabbitMQ.")
+		    $RabbitArguments = "/S -Verbose"
+		    Install-Software $RabbitMQPath $RabbitArguments $RabbitMQFile1
+        }
+        
 		<# 8. Enable RabbbitMQ Management Plugin #>
-		Write-Verbose("Enable RabbbitMQ Management Plugin.")
+		Write-Verbose("Enabling RabbbitMQ Management Plugin.")
 		Enable-RabbitMQManagement
-	}
+
+        <# 9. Restart RabbitMQ service #>
+        Write-Verbose ("Restarting RabbitMQ service")
+        Stop-RabbitMQService
+        Start-RabbitMQService
+        
+  	}
 }
