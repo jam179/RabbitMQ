@@ -14,8 +14,8 @@
             Write-Verbose ("Pausing for 5 Seconds to allow service to Start")
             Start-Sleep -Seconds 5
             # Test if RabbitMQ is installed With the Management plugin enabled.
-	        Write-Verbose("Checking if the RabbitMQ management plugin is enabled.") 
-	        $ListenCHK = netstat -nao | findstr ":15672" 
+	        Write-Verbose("Checking if the RabbitMQ management plugin is enabled.")
+	        $ListenCHK = netstat -nao | findstr ":15672"
 	        $Portlistening = ($ListenCHK -ne $null)
 	        Write-Verbose("RabbitMQ management plugin enabled: $Portlistening")
 
@@ -24,8 +24,8 @@
        Else
        {
             # Test if RabbitMQ is installed With the Management plugin enabled.
-	        Write-Verbose("Checking if the RabbitMQ management plugin is enabled.") 
-	        $ListenCHK = netstat -nao | findstr ":15672" 
+	        Write-Verbose("Checking if the RabbitMQ management plugin is enabled.")
+	        $ListenCHK = netstat -nao | findstr ":15672"
 	        $Portlistening = ($ListenCHK -ne $null)
 	        Write-Verbose("RabbitMQ management plugin enabled: $Portlistening")
 
@@ -70,11 +70,11 @@ Function Get-Installer
 		[string]$Path
 	)
 
-	# Split out the filename from the URL 
+	# Split out the filename from the URL
 	$Count = $URL.Split("/").Count - 1
 	$Filename = $URL.Split("/")[$Count]
 
-	$Out = $Path + "\" + $Filename 
+	$Out = $Path + "\" + $Filename
 
 	If (Test-Path $Out)		#Test if the file needs to be downloaded
 	{
@@ -147,7 +147,7 @@ Function Enable-RabbitMQManagement
 		[environment]::GetEnvironmentVariable("Erlang_Home", "Machine")
 		$env:Erlang_home = [environment]::GetEnvironmentVariable("Erlang_Home", "Machine")
 
-		If($env:Erlang_home -eq "C:\Program Files\erl6.3") 
+		If($env:Erlang_home -eq "C:\Program Files\erl6.3")
 		{
 			Write-Verbose ("Attempting to start Management plugin")
 			& "C:\Program Files (x86)\RabbitMQ Server\rabbitmq_server-3.5.0\sbin\rabbitmq-plugins.bat" "enable" "rabbitmq_management"
@@ -185,7 +185,7 @@ Function New-RabbitMQBuild
 		[Parameter(Mandatory=$False)]
 		[String]$ErlangDlDIR = 'C:\DevOps\Erlang',
 
-		# Directory to download the RabbitMQ installer to.  
+		# Directory to download the RabbitMQ installer to.
 		[Parameter(Mandatory=$False)]
 		[String]$RabbitMQDlDIR = 'C:\DevOps\RabbitMQ',
 
@@ -220,7 +220,7 @@ Function New-RabbitMQBuild
 		New-DLFolder $RabbitMQDlDIR
 
 		<# 4. Download Erlang and place in Erlang directory #>
-		Write-Verbose("Download Eralang.")
+		Write-Verbose("Download Erlang.")
 		$ErLangIN = Get-Installer -URL $ErlangURL -Path $ErlangDlDIR
 
 		$ErlangPath = $ErLangIN[0]
@@ -250,11 +250,11 @@ Function New-RabbitMQBuild
         {
             Write-Verbose("Installing Erlang")
 		    $ErlangArguments = "/S -Wait -Verbose"
-		    Install-Software $ErLangPath $ErlangArguments $ErlangFile1    
+		    Install-Software $ErLangPath $ErlangArguments $ErlangFile1
         }
        
 		<# 7. Install RabbitMQ #>
-        #Test: If RabbitMQ is instlled
+        #Test: If RabbitMQ is installed
         $RabbitMQString = "RabbitMQ Server"
         $RabbitMQInstalled = Test-PreviousInstall -AppToCheck $RabbitMQString
 
@@ -277,6 +277,5 @@ Function New-RabbitMQBuild
         Write-Verbose ("Restarting RabbitMQ service")
         Stop-RabbitMQService
         Start-RabbitMQService
-        
-  	}
+    }
 }
